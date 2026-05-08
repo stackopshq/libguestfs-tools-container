@@ -116,8 +116,8 @@ Releases are automated via GitHub Actions ([.github/workflows/build-image.yml](.
 1. Update CHANGELOG.md with release notes
 2. Create and push a version tag:
    ```bash
-   git tag -a v1.0.0 -m "Release version 1.0.0"
-   git push origin v1.0.0
+   git tag -a v2.1.0 -m "Release v2.1.0"
+   git push origin v2.1.0
    ```
 3. The workflow builds multi-arch (linux/amd64, linux/arm64) and pushes to `ghcr.io/stackopshq/libguestfs-tools` automatically
 

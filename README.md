@@ -115,8 +115,8 @@ Pull the image from GitHub Container Registry:
 ```bash
 podman pull ghcr.io/stackopshq/libguestfs-tools:latest        # slim (default)
 podman pull ghcr.io/stackopshq/libguestfs-tools:full          # with virt-v2v + ntfs-3g
-podman pull ghcr.io/stackopshq/libguestfs-tools:v1            # pinned major (slim)
-podman pull ghcr.io/stackopshq/libguestfs-tools:v1.0.0-full   # pinned full
+podman pull ghcr.io/stackopshq/libguestfs-tools:v2            # pinned major (slim)
+podman pull ghcr.io/stackopshq/libguestfs-tools:v2.0.0-full   # pinned full
 ```
 
 ### Building Locally

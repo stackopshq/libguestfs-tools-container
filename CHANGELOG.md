@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-05-08
+## [2.0.0] - 2026-05-08
 
-First release under the **StackOps** organization (`stackopshq/libguestfs-tools-container`). This is a full rewrite of the project — runtime, distribution, and packaging policies are all new. The previous incarnation under `Net-Architect-Cloud/docker-libguestfs-tools` is discontinued and not version-comparable.
+First release under the **StackOps** organization (`stackopshq/libguestfs-tools-container`). Major version bump from the legacy `1.0.x` line published under `Net-Architect-Cloud/docker-libguestfs-tools` — this is a full rewrite (registry path, base image, default contents, build pipeline). The legacy 1.0.x tags remain in git history but point to discontinued image artifacts under the old organization; do not pull them.
 
 ### Changed
 - **BREAKING**: Migrated container tooling from Docker to Podman/Buildah.
