@@ -2,7 +2,8 @@
 # Base: Rocky Linux 10 UBI (non-init).
 # The libguestfs appliance boots its own kernel/init inside a child VM —
 # the host container needs no systemd-as-pid1, so we use :10-ubi (not :10-ubi-init).
-FROM quay.io/rockylinux/rockylinux:10-ubi
+# Digest pinned for reproducibility; bumped by Renovate (see renovate.json).
+FROM quay.io/rockylinux/rockylinux:10-ubi@sha256:505425723e64988f3b2cbf640cdb576597f5e427bc9716a516a6673e49464eb6
 
 # Build-time provenance (passed by CI via --build-arg).
 ARG VERSION=dev

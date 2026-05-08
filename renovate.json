@@ -1,0 +1,55 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits"
+  ],
+  "timezone": "Europe/Zurich",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "prHourlyLimit": 4,
+  "prConcurrentLimit": 8,
+
+  "github-actions": {
+    "pinDigests": true
+  },
+
+  "dockerfile": {
+    "managerFilePatterns": ["/(^|/)Containerfile(\\..+)?$/"],
+    "pinDigests": true
+  },
+
+  "packageRules": [
+    {
+      "description": "Group all GitHub Actions bumps into one weekly PR",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions",
+      "automerge": false
+    },
+    {
+      "description": "Base image (Rocky Linux) — bump on patch/minor, hold majors for review",
+      "matchManagers": ["dockerfile"],
+      "matchPackageNames": ["quay.io/rockylinux/rockylinux"],
+      "matchUpdateTypes": ["digest", "patch", "minor", "pin", "pinDigest"],
+      "automerge": false,
+      "groupName": "rocky-base"
+    },
+    {
+      "description": "Hold major bumps for explicit review (e.g. Rocky 11)",
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "major-bump"],
+      "automerge": false
+    }
+  ],
+
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "schedule": ["at any time"]
+  },
+
+  "lockFileMaintenance": {
+    "enabled": false
+  }
+}

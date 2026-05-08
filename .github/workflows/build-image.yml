@@ -6,6 +6,12 @@ on:
       - 'v*'
   workflow_dispatch:
 
+# Cancel previous runs of the same ref (e.g. repeated workflow_dispatch on main).
+# Tag refs are unique per release, so this never cancels a release build.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   IMAGE_NAME: libguestfs-tools
   REGISTRY: ghcr.io
@@ -35,7 +41,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
       - name: Compute version & tags
         id: meta
@@ -61,9 +67,15 @@ jobs:
             echo "build_date=${BUILD_DATE}"
           } >> "$GITHUB_OUTPUT"
 
+      # Note: redhat-actions/{buildah-build,podman-login,push-to-registry} are
+      # still on Node 20 at their current floating tags. Node 20 is deprecated
+      # in GHA (default switches to Node 24 on 2026-06-02, removed 2026-09-16);
+      # upstream hasn't tagged Node-24 versions yet. Renovate will bump these
+      # when new tags ship. Replace with shell-only podman commands if upstream
+      # doesn't move before the Node 20 removal date.
       - name: Build container image
         id: build
-        uses: redhat-actions/buildah-build@v2
+        uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056  # v2
         with:
           image: ${{ env.IMAGE_NAME }}
           tags: ${{ steps.meta.outputs.arch_tag }}
@@ -92,7 +104,7 @@ jobs:
           fi
 
       - name: Log in to GHCR
-        uses: redhat-actions/podman-login@v1
+        uses: redhat-actions/podman-login@4934294ad0449894bcd1e9f191899d7292469603  # v1
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.repository_owner }}
@@ -100,14 +112,14 @@ jobs:
 
       - name: Push per-arch image
         id: push
-        uses: redhat-actions/push-to-registry@v2
+        uses: redhat-actions/push-to-registry@5ed88d269cf581ea9ef6dd6806d01562096bee9c  # v2
         with:
           image: ${{ steps.build.outputs.image }}
           tags: ${{ steps.meta.outputs.arch_tag }}
           registry: ${{ env.REGISTRY }}/${{ github.repository_owner }}
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac  # v3
 
       - name: Sign image (cosign keyless)
         env:
@@ -119,7 +131,7 @@ jobs:
           cosign sign "$REF"
 
       - name: Generate SBOM (SPDX)
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610  # v0
         with:
           image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
           format: spdx-json
@@ -135,7 +147,7 @@ jobs:
           cosign attest --predicate "sbom-${{ matrix.variant }}-${{ matrix.arch }}.spdx.json" --type spdxjson "$REF"
 
       - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: sbom-${{ matrix.variant }}-${{ matrix.arch }}
           path: sbom-${{ matrix.variant }}-${{ matrix.arch }}.spdx.json
@@ -185,7 +197,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
-        uses: redhat-actions/podman-login@v1
+        uses: redhat-actions/podman-login@4934294ad0449894bcd1e9f191899d7292469603  # v1
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.repository_owner }}
