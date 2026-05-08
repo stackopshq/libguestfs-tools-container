@@ -1,16 +1,17 @@
 #!/bin/bash
 # Example: Customize a VM image (install packages, run commands)
 
-set -e
+set -euo pipefail
 
 IMAGE_DIR="${IMAGE_DIR:-./images}"
 IMAGE_FILE="${1:-vm-image.qcow2}"
+IMAGE="${IMAGE:-ghcr.io/stackopshq/libguestfs-tools:latest}"
 
 echo "Customizing $IMAGE_FILE..."
 
-docker run --rm \
-  -v "$IMAGE_DIR:/workspace/images" \
-  ghcr.io/net-architect-cloud/docker-libguestfs-tools:latest \
+podman run --rm \
+  -v "$IMAGE_DIR:/workspace/images:Z" \
+  "$IMAGE" \
   virt-customize -a "/workspace/images/$IMAGE_FILE" \
   --install nginx,curl \
   --run-command "systemctl enable nginx" \

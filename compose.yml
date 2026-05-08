@@ -1,13 +1,11 @@
-version: '3.8'
-
 services:
   libguestfs-tools:
-    image: ghcr.io/net-architect-cloud/docker-libguestfs-tools:latest
+    image: ghcr.io/stackopshq/libguestfs-tools:latest
     container_name: libguestfs-tools
     privileged: true
     volumes:
-      - ./images:/workspace/images
-      - ./shared:/workspace/shared
+      - ./images:/workspace/images:Z
+      - ./shared:/workspace/shared:Z
     environment:
       - LIBGUESTFS_BACKEND=direct
       - LIBGUESTFS_DEBUG=0

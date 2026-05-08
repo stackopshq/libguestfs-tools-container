@@ -10,7 +10,7 @@ If you find a bug, please create an issue with:
 - A clear, descriptive title
 - Steps to reproduce the issue
 - Expected behavior vs actual behavior
-- Your environment (Docker version, OS, etc.)
+- Your environment (Podman version, OS, SELinux mode, etc.)
 - Relevant logs or error messages
 
 ### Suggesting Enhancements
@@ -34,7 +34,7 @@ Enhancement suggestions are welcome! Please create an issue with:
 - Keep changes focused and atomic
 - Write clear commit messages following conventional commits format
 - Update the CHANGELOG.md with your changes
-- Ensure the Docker image builds successfully
+- Ensure the container image builds successfully (`podman build`)
 - Test with multiple image formats if applicable
 
 ## Development Setup
@@ -42,29 +42,30 @@ Enhancement suggestions are welcome! Please create an issue with:
 ### Building Locally
 
 ```bash
-git clone https://github.com/Net-Architect-Cloud/docker-libguestfs-tools.git
+git clone https://github.com/stackopshq/libguestfs-tools-container.git
 cd docker-libguestfs-tools
-docker build -t libguestfs-tools:dev .
+podman build -t libguestfs-tools:dev .
 ```
 
 ### Testing Changes
 
 ```bash
 # Test basic functionality
-docker run --rm libguestfs-tools:dev qemu-img --version
+podman run --rm libguestfs-tools:dev qemu-img --version
+podman run --rm libguestfs-tools:dev libguestfs-test-tool
 
-# Test with a sample image
-docker run --rm -v ./test-images:/workspace/images libguestfs-tools:dev \
+# Test with a sample image (note :Z for SELinux Enforcing hosts)
+podman run --rm -v ./test-images:/workspace/images:Z libguestfs-tools:dev \
   virt-df -a /workspace/images/test.qcow2
 ```
 
 ## Coding Standards
 
-### Dockerfile
-- Use multi-stage builds when appropriate
-- Minimize layer count and image size
-- Document all ENV variables
-- Follow Docker best practices
+### Containerfile
+- Keep the build to a single layer where it makes sense (install + cleanup in one `RUN`)
+- Minimize image size: aggressive cleanup of caches, docs, man pages
+- Document all `ENV` variables in [README.md](README.md)
+- The file is named `Containerfile` (OCI convention) and consumed by `podman build`
 
 ### Shell Scripts
 - Use `#!/bin/bash` shebang
@@ -100,7 +101,7 @@ Follow the conventional commits specification:
 
 **Example:**
 ```
-feat(dockerfile): add support for additional filesystems
+feat(containerfile): add support for additional filesystems
 
 Added support for ZFS and F2FS filesystems by including
 necessary packages in the base image.
@@ -110,7 +111,7 @@ Closes #123
 
 ## Release Process
 
-Releases are automated via GitHub Actions:
+Releases are automated via GitHub Actions ([.github/workflows/build-image.yml](.github/workflows/build-image.yml)) using `buildah` and `podman push`:
 
 1. Update CHANGELOG.md with release notes
 2. Create and push a version tag:
@@ -118,7 +119,7 @@ Releases are automated via GitHub Actions:
    git tag -a v1.0.0 -m "Release version 1.0.0"
    git push origin v1.0.0
    ```
-3. GitHub Actions will build and push the image automatically
+3. The workflow builds multi-arch (linux/amd64, linux/arm64) and pushes to `ghcr.io/stackopshq/libguestfs-tools` automatically
 
 ## Code of Conduct
 

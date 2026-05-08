@@ -16,9 +16,9 @@ The container is configured with default memory settings:
 - Monitor host memory usage to avoid swapping
 
 ```bash
-docker run -e LIBGUESTFS_MEMSIZE=8192 -e LIBGUESTFS_SMP=8 \
-  -v ./images:/workspace/images \
-  ghcr.io/net-architect-cloud/docker-libguestfs-tools
+podman run --rm -e LIBGUESTFS_MEMSIZE=8192 -e LIBGUESTFS_SMP=8 \
+  -v ./images:/workspace/images:Z \
+  ghcr.io/stackopshq/libguestfs-tools
 ```
 
 ### Backend Selection
@@ -29,9 +29,9 @@ The container uses `LIBGUESTFS_BACKEND=direct` by default:
 
 For better isolation, you can use the libvirt backend:
 ```bash
-docker run -e LIBGUESTFS_BACKEND=libvirt \
-  -v ./images:/workspace/images \
-  ghcr.io/net-architect-cloud/docker-libguestfs-tools
+podman run --rm -e LIBGUESTFS_BACKEND=libvirt \
+  -v ./images:/workspace/images:Z \
+  ghcr.io/stackopshq/libguestfs-tools
 ```
 
 ### Disk I/O Optimization
@@ -47,9 +47,9 @@ docker run -e LIBGUESTFS_BACKEND=libvirt \
 For operations requiring virtualization, KVM acceleration significantly improves performance:
 
 ```bash
-docker run --device=/dev/kvm \
-  -v ./images:/workspace/images \
-  ghcr.io/net-architect-cloud/docker-libguestfs-tools
+podman run --rm --device=/dev/kvm \
+  -v ./images:/workspace/images:Z \
+  ghcr.io/stackopshq/libguestfs-tools
 ```
 
 **Note**: Requires KVM support on the host system.
@@ -64,9 +64,9 @@ Some operations require `--privileged` flag:
 - Certain filesystem operations
 
 ```bash
-docker run --privileged \
-  -v ./images:/workspace/images \
-  ghcr.io/net-architect-cloud/docker-libguestfs-tools
+podman run --rm --privileged \
+  -v ./images:/workspace/images:Z \
+  ghcr.io/stackopshq/libguestfs-tools
 ```
 
 ### 2. Filesystem Support
@@ -104,7 +104,7 @@ docker run --privileged \
 
 The container has limited network tools by default. For network-heavy operations:
 - Install additional tools as needed
-- Consider using a custom Dockerfile extending this image
+- Consider using a custom Containerfile extending this image
 
 ### 6. Windows Guest Support
 
@@ -126,7 +126,7 @@ Windows guest operations have limitations:
 4. Use local storage instead of network mounts
 5. Enable verbose logging to identify bottlenecks:
    ```bash
-   docker run -e LIBGUESTFS_VERBOSE=1 -e LIBGUESTFS_DEBUG=1 ...
+   podman run --rm -e LIBGUESTFS_VERBOSE=1 -e LIBGUESTFS_DEBUG=1 ...
    ```
 
 ### Out of Memory Errors
@@ -136,11 +136,11 @@ Windows guest operations have limitations:
 **Solutions:**
 1. Increase container memory limit:
    ```bash
-   docker run --memory=8g --memory-swap=16g ...
+   podman run --rm --memory=8g --memory-swap=16g ...
    ```
 2. Increase libguestfs appliance memory:
    ```bash
-   docker run -e LIBGUESTFS_MEMSIZE=8192 ...
+   podman run --rm -e LIBGUESTFS_MEMSIZE=8192 ...
    ```
 3. Process images in smaller chunks if possible
 
@@ -149,10 +149,10 @@ Windows guest operations have limitations:
 **Symptoms:** "No space left on device" errors
 
 **Solutions:**
-1. Ensure sufficient space in Docker's storage location
+1. Ensure sufficient space in Podman's storage location (`~/.local/share/containers/storage` for rootless, `/var/lib/containers/storage` for rootful)
 2. Clean up unused images and containers:
    ```bash
-   docker system prune -a
+   podman system prune -a
    ```
 3. Use external volumes with more space
 4. Enable qcow2 compression for output images

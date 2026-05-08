@@ -15,21 +15,21 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/Net-Architect-Cloud/docker-libguestfs-tools">
+  <a href="https://github.com/stackopshq/libguestfs-tools-container">
     <img src="images/logo.svg" alt="Logo" width="250">
   </a>
 
 <h3 align="center">LibGuestFS Container</h3>
 
   <p align="center">
-    Docker container with libguestfs, qemu and image manipulation tools
+    OCI container with libguestfs, qemu and image manipulation tools (Podman-first)
     <br />
-    <a href="https://github.com/Net-Architect-Cloud/docker-libguestfs-tools"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/stackopshq/libguestfs-tools-container"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/Net-Architect-Cloud/docker-libguestfs-tools/issues">Report Bug</a>
+    <a href="https://github.com/stackopshq/libguestfs-tools-container/issues">Report Bug</a>
     ·
-    <a href="https://github.com/Net-Architect-Cloud/docker-libguestfs-tools/issues">Request Feature</a>
+    <a href="https://github.com/stackopshq/libguestfs-tools-container/issues">Request Feature</a>
   </p>
 </div>
 
@@ -52,23 +52,45 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-This project provides a Docker image containing libguestfs, qemu, and other essential tools for virtual machine image manipulation. Based on Rocky Linux 10 UBI, this container is optimized for size and performance while offering the full functionality of libguestfs and associated tools.
+This project provides an OCI container image containing libguestfs, qemu, and other essential tools for virtual machine image manipulation. Based on Rocky Linux 10 UBI, this container is optimized for size and performance.
+
+The image is built with **Buildah** and run with **Podman** (rootless-friendly, no daemon). Any OCI-compatible engine works at runtime, but all examples in this repo use `podman`.
+
+### Variants
+
+The image is published in two variants. Pick by tag:
+
+| Tag                | Contents                                                                                       | Use case                                                                  |
+|--------------------|------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
+| `:latest`, `:slim` | libguestfs + qemu + Linux filesystem tools (ext/xfs/btrfs/fat) + parted/gdisk + cloud-utils    | **Default.** Building and customizing Linux VM images (virt-customize, virt-sysprep, virt-sparsify). Includes the openimages.cloud build pipeline. |
+| `:full`            | Everything in `:slim` **plus** `virt-v2v` and `ntfs-3g`                                         | VMware/Hyper-V → KVM conversions, Windows guest manipulation              |
+
+Both variants are multi-arch (linux/amd64 + linux/arm64), signed via cosign keyless (Sigstore), and ship with an SPDX SBOM attestation.
 
 ### Key Features
 
-- ✅ Ready-to-use libguestfs configuration with direct backend
-- 🗂️ Support for multiple filesystem formats (ext4, XFS, BTRFS, NTFS, FAT)
-- 🛠️ Comprehensive tools for converting, manipulating, and analyzing virtual images
-- 🚀 Lightweight container image with aggressive cleanup of unnecessary dependencies
-- 🔧 Pre-configured environment variables for optimal performance
+- Ready-to-use libguestfs with `direct` backend (no libvirtd required)
+- Linux filesystems out of the box: ext2/3/4, XFS, BTRFS, FAT32 (NTFS only in `:full`)
+- `qemu-kvm-core` (no graphical/audio subpackages) — minimal qemu surface
+- Pre-tuned env vars for libguestfs appliance memory & CPU
+- Provenance: OCI labels (revision, version, created, source), Cosign signature, SPDX SBOM
 
-### Use Cases
+### Verifying the image
 
-This container is ideal for:
-- CI/CD pipelines requiring VM image manipulation
-- Development environments needing image conversion tools
-- Automation tools for virtualized infrastructure management
-- Image analysis and forensics workflows
+The image is signed keyless via GitHub OIDC. To verify before pulling:
+
+```bash
+cosign verify ghcr.io/stackopshq/libguestfs-tools:latest \
+  --certificate-identity-regexp '^https://github.com/stackopshq/libguestfs-tools-container/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+The SBOM is attached as a cosign attestation:
+
+```bash
+cosign download attestation ghcr.io/stackopshq/libguestfs-tools:latest \
+  --predicate-type https://spdx.dev/Document
+```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -77,39 +99,49 @@ This container is ideal for:
 
 ### Prerequisites
 
-- Docker installed on your system (version 20.10 or later recommended)
+- [Podman](https://podman.io/) 4.0 or later installed on your system
 - Sufficient disk space for your VM images
 - Basic knowledge of libguestfs tools
-- For advanced operations: Docker with `--privileged` flag support
+- For advanced operations: ability to run containers with `--privileged`
 - Optional: `/dev/kvm` access for better performance with nested virtualization
+
+> **SELinux note:** on Enforcing hosts (RHEL/Rocky/Fedora), append `:Z` to bind-mount sources (e.g. `-v ./images:/workspace/images:Z`) so Podman relabels the volume for the container. Without this you'll hit permission denied errors.
 
 ### Installation
 
 Pull the image from GitHub Container Registry:
 ```bash
-docker pull ghcr.io/net-architect-cloud/docker-libguestfs-tools:latest
+podman pull ghcr.io/stackopshq/libguestfs-tools:latest        # slim (default)
+podman pull ghcr.io/stackopshq/libguestfs-tools:full          # with virt-v2v + ntfs-3g
+podman pull ghcr.io/stackopshq/libguestfs-tools:v1            # pinned major (slim)
+podman pull ghcr.io/stackopshq/libguestfs-tools:v1.0.0-full   # pinned full
 ```
 
 ### Building Locally
 
 To build the image yourself:
 ```bash
-git clone https://github.com/Net-Architect-Cloud/docker-libguestfs-tools.git
-cd docker-libguestfs-tools
-docker build -t libguestfs-tools:local .
+git clone https://github.com/stackopshq/libguestfs-tools-container.git
+cd libguestfs-tools-container
+
+# Slim (default)
+podman build -t libguestfs-tools:local .
+
+# Full (with virt-v2v + ntfs-3g)
+podman build --build-arg VARIANT=full -t libguestfs-tools:local-full .
 ```
 
-### Using Docker Compose
+### Using Compose
 
-A `docker-compose.yml` file is provided for easier container management:
+A [`compose.yml`](compose.yml) file is provided for easier container management. With [`podman-compose`](https://github.com/containers/podman-compose):
 
 ```bash
-docker-compose run --rm libguestfs-tools bash
+podman-compose run --rm libguestfs-tools bash
 ```
 
 Or run specific commands:
 ```bash
-docker-compose run --rm libguestfs-tools virt-df -a /workspace/images/my-vm.qcow2
+podman-compose run --rm libguestfs-tools virt-df -a /workspace/images/my-vm.qcow2
 ```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
@@ -121,47 +153,55 @@ docker-compose run --rm libguestfs-tools virt-df -a /workspace/images/my-vm.qcow
 
 1. **Mount a volume to share images with the container**
    ```bash
-   docker run -v /local/path/images:/workspace/images ghcr.io/net-architect-cloud/docker-libguestfs-tools virt-df -a /workspace/images/my-vm.qcow2
+   podman run --rm -v /local/path/images:/workspace/images:Z \
+     ghcr.io/stackopshq/libguestfs-tools \
+     virt-df -a /workspace/images/my-vm.qcow2
    ```
 
 2. **Run libguestfs tools interactively**
    ```bash
-   docker run -it -v /local/path/images:/workspace/images ghcr.io/net-architect-cloud/docker-libguestfs-tools bash
+   podman run --rm -it -v /local/path/images:/workspace/images:Z \
+     ghcr.io/stackopshq/libguestfs-tools bash
    ```
 
 3. **Execute specific commands**
    ```bash
-   docker run -v /local/path/images:/workspace/images ghcr.io/net-architect-cloud/docker-libguestfs-tools \
+   podman run --rm -v /local/path/images:/workspace/images:Z \
+     ghcr.io/stackopshq/libguestfs-tools \
      virt-customize -a /workspace/images/my-vm.qcow2 --install nginx
    ```
 
 ### Advanced Examples
 
-#### Converting VMware to qcow2 format
+#### Converting VMware to qcow2 format (requires `:full` variant)
 
 ```bash
-docker run -v /local/path/images:/workspace/images ghcr.io/net-architect-cloud/docker-libguestfs-tools \
+podman run --rm -v /local/path/images:/workspace/images:Z \
+  ghcr.io/stackopshq/libguestfs-tools:full \
   virt-v2v -i ova /workspace/images/source-vm.ova -o local -os /workspace/images -of qcow2
 ```
 
 #### Inspecting a VM image
 
 ```bash
-docker run -v /local/path/images:/workspace/images ghcr.io/net-architect-cloud/docker-libguestfs-tools \
+podman run --rm -v /local/path/images:/workspace/images:Z \
+  ghcr.io/stackopshq/libguestfs-tools \
   virt-inspector /workspace/images/my-vm.qcow2
 ```
 
 #### Resizing a disk image
 
 ```bash
-docker run -v /local/path/images:/workspace/images ghcr.io/net-architect-cloud/docker-libguestfs-tools \
+podman run --rm -v /local/path/images:/workspace/images:Z \
+  ghcr.io/stackopshq/libguestfs-tools \
   qemu-img resize /workspace/images/my-vm.qcow2 +10G
 ```
 
 #### Mounting and exploring filesystem
 
 ```bash
-docker run -it --privileged -v /local/path/images:/workspace/images ghcr.io/net-architect-cloud/docker-libguestfs-tools \
+podman run --rm -it --privileged -v /local/path/images:/workspace/images:Z \
+  ghcr.io/stackopshq/libguestfs-tools \
   guestmount -a /workspace/images/my-vm.qcow2 -m /dev/sda1 /mnt
 ```
 
@@ -197,9 +237,9 @@ The container is configured with the following environment variables for libgues
 You can override these values when running the container:
 
 ```bash
-docker run -e LIBGUESTFS_VERBOSE=1 -e LIBGUESTFS_DEBUG=1 \
-  -v /local/path:/workspace/images \
-  ghcr.io/net-architect-cloud/docker-libguestfs-tools
+podman run --rm -e LIBGUESTFS_VERBOSE=1 -e LIBGUESTFS_DEBUG=1 \
+  -v /local/path:/workspace/images:Z \
+  ghcr.io/stackopshq/libguestfs-tools
 ```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
@@ -207,23 +247,19 @@ docker run -e LIBGUESTFS_VERBOSE=1 -e LIBGUESTFS_DEBUG=1 \
 <!-- SUPPORTED FORMATS -->
 ## Supported Formats
 
-### Input Formats
-- VMware (OVA, VMDK)
-- VirtualBox (VDI)
-- Hyper-V (VHD, VHDX)
-- qcow2
-- Raw disk images
+### Input Formats (read by `qemu-img` and `virt-*` tools)
+- qcow2, raw, VMDK, VDI, VHD/VHDX (handled natively by `qemu-img`)
+- OVA / OVF — **`:full` only** (requires `virt-v2v`)
 
 ### Output Formats
-- qcow2 (recommended for KVM/OpenStack)
-- VMDK (for VMware)
-- VDI (for VirtualBox)
-- Raw disk images
+- qcow2 (recommended for KVM/OpenStack — sparse, snapshots, compression)
+- raw (fastest, largest)
+- VMDK (for VMware compat)
+- VDI (for VirtualBox compat)
 
 ### Filesystem Support
-- Linux: ext2, ext3, ext4, XFS, BTRFS
-- Windows: NTFS, FAT32
-- Others: ISO9660, UDF
+- **`:slim` (default)** — Linux: ext2/3/4, XFS, BTRFS · FAT32 · ISO9660/UDF
+- **`:full`** — adds NTFS (read/write) for Windows guests via `ntfs-3g`
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -232,17 +268,21 @@ docker run -e LIBGUESTFS_VERBOSE=1 -e LIBGUESTFS_DEBUG=1 \
 
 ### Common Issues
 
-**Permission denied errors:**
+**Permission denied on bind mounts (SELinux):**
+The host is running SELinux in Enforcing mode. Append `:Z` to the volume so Podman relabels it for the container, e.g. `-v ./images:/workspace/images:Z`. Never disable SELinux as a workaround.
+
+**Permission denied for privileged operations:**
 ```bash
-# Run with --privileged flag for advanced operations
-docker run --privileged -v /local/path:/workspace/images ghcr.io/net-architect-cloud/docker-libguestfs-tools
+# Run with --privileged for guestmount, direct device access, etc.
+podman run --rm --privileged -v /local/path:/workspace/images:Z \
+  ghcr.io/stackopshq/libguestfs-tools
 ```
 
 **Enable verbose output for debugging:**
 ```bash
-docker run -e LIBGUESTFS_VERBOSE=1 -e LIBGUESTFS_DEBUG=1 \
-  -v /local/path:/workspace/images \
-  ghcr.io/net-architect-cloud/docker-libguestfs-tools
+podman run --rm -e LIBGUESTFS_VERBOSE=1 -e LIBGUESTFS_DEBUG=1 \
+  -v /local/path:/workspace/images:Z \
+  ghcr.io/stackopshq/libguestfs-tools
 ```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
@@ -277,28 +317,28 @@ Distributed under the GPL-3.0 License. See [`LICENSE`](LICENSE) for more informa
 ## Contact
 
 **Kevin Allioli**
-- Twitter: [@netarchitect](https://twitter.com/netarchitect)
-- Email: kevin@netarchitect.cloud
+- Twitter: [@stackopshq](https://twitter.com/stackopshq)
+- Email: kevin@stackops.ch
 - LinkedIn: [kevinallioli](https://linkedin.com/in/kevinallioli)
 
 **Project Links:**
-- Repository: [https://github.com/Net-Architect-Cloud/docker-libguestfs-tools](https://github.com/Net-Architect-Cloud/docker-libguestfs-tools)
-- Issues: [Report a Bug](https://github.com/Net-Architect-Cloud/docker-libguestfs-tools/issues)
-- Container Registry: [ghcr.io/net-architect-cloud/docker-libguestfs-tools](https://github.com/Net-Architect-Cloud/docker-libguestfs-tools/pkgs/container/docker-libguestfs-tools)
+- Repository: [https://github.com/stackopshq/libguestfs-tools-container](https://github.com/stackopshq/libguestfs-tools-container)
+- Issues: [Report a Bug](https://github.com/stackopshq/libguestfs-tools-container/issues)
+- Container Registry: [ghcr.io/stackopshq/libguestfs-tools](https://github.com/stackopshq/libguestfs-tools-container/pkgs/container/libguestfs-tools)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/Net-Architect-Cloud/docker-libguestfs-tools.svg?style=for-the-badge
-[contributors-url]: https://github.com/Net-Architect-Cloud/docker-libguestfs-tools/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/Net-Architect-Cloud/docker-libguestfs-tools.svg?style=for-the-badge
-[forks-url]: https://github.com/Net-Architect-Cloud/docker-libguestfs-tools/network/members
-[stars-shield]: https://img.shields.io/github/stars/Net-Architect-Cloud/docker-libguestfs-tools.svg?style=for-the-badge
-[stars-url]: https://github.com/Net-Architect-Cloud/docker-libguestfs-tools/stargazers
-[issues-shield]: https://img.shields.io/github/issues/Net-Architect-Cloud/docker-libguestfs-tools.svg?style=for-the-badge
-[issues-url]: https://github.com/Net-Architect-Cloud/docker-libguestfs-tools/issues
-[license-shield]: https://img.shields.io/github/license/Net-Architect-Cloud/docker-libguestfs-tools.svg?style=for-the-badge
-[license-url]: https://github.com/Net-Architect-Cloud/docker-libguestfs-tools/blob/main/LICENSE
+[contributors-shield]: https://img.shields.io/github/contributors/stackopshq/libguestfs-tools-container.svg?style=for-the-badge
+[contributors-url]: https://github.com/stackopshq/libguestfs-tools-container/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/stackopshq/libguestfs-tools-container.svg?style=for-the-badge
+[forks-url]: https://github.com/stackopshq/libguestfs-tools-container/network/members
+[stars-shield]: https://img.shields.io/github/stars/stackopshq/libguestfs-tools-container.svg?style=for-the-badge
+[stars-url]: https://github.com/stackopshq/libguestfs-tools-container/stargazers
+[issues-shield]: https://img.shields.io/github/issues/stackopshq/libguestfs-tools-container.svg?style=for-the-badge
+[issues-url]: https://github.com/stackopshq/libguestfs-tools-container/issues
+[license-shield]: https://img.shields.io/github/license/stackopshq/libguestfs-tools-container.svg?style=for-the-badge
+[license-url]: https://github.com/stackopshq/libguestfs-tools-container/blob/main/LICENSE
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/kevinallioli

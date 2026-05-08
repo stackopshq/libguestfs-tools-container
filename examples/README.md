@@ -5,7 +5,7 @@ This directory contains example scripts demonstrating common use cases for the L
 ## Available Examples
 
 ### 1. Convert VMDK to QCOW2
-**File:** `convert-vmdk-to-qcow2.sh`
+**File:** [`convert-vmdk-to-qcow2.sh`](convert-vmdk-to-qcow2.sh)
 
 Converts a VMware VMDK image to QCOW2 format.
 
@@ -15,7 +15,7 @@ export IMAGE_DIR=/path/to/images
 ```
 
 ### 2. Inspect VM Image
-**File:** `inspect-vm-image.sh`
+**File:** [`inspect-vm-image.sh`](inspect-vm-image.sh)
 
 Inspects a VM image to retrieve OS information, installed applications, and filesystem details.
 
@@ -25,7 +25,7 @@ export IMAGE_DIR=/path/to/images
 ```
 
 ### 3. Customize VM Image
-**File:** `customize-vm.sh`
+**File:** [`customize-vm.sh`](customize-vm.sh)
 
 Customizes a VM image by installing packages and running commands.
 
@@ -38,17 +38,19 @@ export IMAGE_DIR=/path/to/images
 
 - All scripts use the `IMAGE_DIR` environment variable to specify the directory containing VM images
 - Default value for `IMAGE_DIR` is `./images`
+- The container image can be overridden via the `IMAGE` environment variable (default: `ghcr.io/stackopshq/libguestfs-tools:latest`)
 - Make scripts executable: `chmod +x examples/*.sh`
-- Ensure Docker is running before executing scripts
+- Podman must be installed and operational before executing scripts
+- On SELinux Enforcing hosts the scripts use `:Z` on bind mounts so Podman relabels the volume
 
 ## Creating Custom Scripts
 
 You can use these examples as templates for your own automation scripts. The general pattern is:
 
 ```bash
-docker run --rm \
-  -v "$IMAGE_DIR:/workspace/images" \
-  ghcr.io/net-architect-cloud/docker-libguestfs-tools:latest \
+podman run --rm \
+  -v "$IMAGE_DIR:/workspace/images:Z" \
+  ghcr.io/stackopshq/libguestfs-tools:latest \
   <libguestfs-command> <arguments>
 ```
 
