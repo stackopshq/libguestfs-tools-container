@@ -22,11 +22,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # virt-v2v is not packaged for aarch64 in EPEL 10 (it converts VMs
+        # from x86 hypervisors — VMware ESXi, Hyper-V — so an arm64 build is
+        # not a meaningful target). The :full variant is therefore amd64-only;
+        # slim is multi-arch.
         include:
           - { arch: amd64, runner: ubuntu-latest,    variant: slim }
           - { arch: amd64, runner: ubuntu-latest,    variant: full }
           - { arch: arm64, runner: ubuntu-24.04-arm, variant: slim }
-          - { arch: arm64, runner: ubuntu-24.04-arm, variant: full }
     outputs:
       version: ${{ steps.meta.outputs.version }}
 
@@ -194,12 +197,17 @@ jobs:
           set -euo pipefail
           REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}"
           SRC="${{ steps.tags.outputs.source_tag }}"
+          VARIANT="${{ matrix.variant }}"
           for TAG in ${{ steps.tags.outputs.tags }}; do
             echo "::group::manifest ${REPO}:${TAG}"
             podman manifest exists "${REPO}:${TAG}" && podman manifest rm "${REPO}:${TAG}" || true
             podman manifest create "${REPO}:${TAG}"
             podman manifest add "${REPO}:${TAG}" "docker://${REPO}:${SRC}-amd64"
-            podman manifest add "${REPO}:${TAG}" "docker://${REPO}:${SRC}-arm64"
+            # slim is multi-arch (amd64 + arm64); full is amd64-only because
+            # virt-v2v is not packaged for aarch64 on EPEL 10.
+            if [[ "${VARIANT}" == "slim" ]]; then
+              podman manifest add "${REPO}:${TAG}" "docker://${REPO}:${SRC}-arm64"
+            fi
             podman manifest push --all "${REPO}:${TAG}" "docker://${REPO}:${TAG}"
             echo "::endgroup::"
           done

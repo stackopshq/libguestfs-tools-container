@@ -60,12 +60,14 @@ The image is built with **Buildah** and run with **Podman** (rootless-friendly, 
 
 The image is published in two variants. Pick by tag:
 
-| Tag                | Contents                                                                                       | Use case                                                                  |
-|--------------------|------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
-| `:latest`, `:slim` | libguestfs + qemu + Linux filesystem tools (ext/xfs/btrfs/fat) + parted/gdisk + cloud-utils    | **Default.** Building and customizing Linux VM images (virt-customize, virt-sysprep, virt-sparsify). Includes the openimages.cloud build pipeline. |
-| `:full`            | Everything in `:slim` **plus** `virt-v2v` and `ntfs-3g`                                         | VMware/Hyper-V → KVM conversions, Windows guest manipulation              |
+| Tag                | Contents                                                                                       | Architectures      | Use case                                                                  |
+|--------------------|------------------------------------------------------------------------------------------------|--------------------|---------------------------------------------------------------------------|
+| `:latest`, `:slim` | libguestfs + qemu + Linux filesystem tools (ext/xfs/btrfs/fat) + parted/gdisk + cloud-utils    | amd64 + arm64      | **Default.** Building and customizing Linux VM images (virt-customize, virt-sysprep, virt-sparsify). Powers the openimages.cloud build pipeline. |
+| `:full`            | Everything in `:slim` **plus** `virt-v2v` and `ntfs-3g`                                         | amd64 only*        | VMware/Hyper-V → KVM conversions, Windows guest manipulation              |
 
-Both variants are multi-arch (linux/amd64 + linux/arm64), signed via cosign keyless (Sigstore), and ship with an SPDX SBOM attestation.
+\* `virt-v2v` is not packaged for aarch64 on EPEL 10 (it converts VMs from x86 hypervisors), so the `:full` variant is published amd64-only.
+
+Both variants are signed via cosign keyless (Sigstore) and ship with an SPDX SBOM attestation.
 
 ### Key Features
 

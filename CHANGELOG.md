@@ -19,8 +19,8 @@ First release under the **StackOps** organization (`stackopshq/libguestfs-tools-
   - Example scripts under `examples/` now use `podman run` and accept an `IMAGE` env var override.
 - **BREAKING**: Renamed published image from `ghcr.io/net-architect-cloud/docker-libguestfs-tools` → `ghcr.io/stackopshq/libguestfs-tools`. Source repository moved from `Net-Architect-Cloud/docker-libguestfs-tools` to `stackopshq/libguestfs-tools-container`. Existing pull commands must be updated.
 - **BREAKING**: Image now published in **two variants**:
-  - `:latest`/`:slim` (default) — drops `virt-v2v` and `ntfs-3g`. Targets Linux VM image manipulation (virt-customize/virt-sysprep/virt-sparsify), which is the openimages.cloud build-pipeline use case.
-  - `:full` — adds `virt-v2v` and `ntfs-3g` for VMware/Hyper-V → KVM conversions and Windows guest support.
+  - `:latest`/`:slim` (default, multi-arch amd64 + arm64) — drops `virt-v2v` and `ntfs-3g`. Targets Linux VM image manipulation (virt-customize/virt-sysprep/virt-sparsify), which is the openimages.cloud build-pipeline use case.
+  - `:full` (amd64-only — `virt-v2v` is not packaged for aarch64 on EPEL 10) — adds `virt-v2v` and `ntfs-3g` for VMware/Hyper-V → KVM conversions and Windows guest support.
   Pull `:full` if you previously relied on virt-v2v from `:latest`.
 - **BREAKING**: Base image changed from `quay.io/rockylinux/rockylinux:10-ubi-init` → `quay.io/rockylinux/rockylinux:10-ubi`. The libguestfs appliance boots its own kernel/init in a child VM, so the host container does not need systemd-as-pid1.
 - **BREAKING**: Replaced `qemu-kvm` (meta-package) with `qemu-kvm-core`. Drops `qemu-kvm-ui-opengl` → `mesa-dri-drivers` → `llvm-libs` (~165 MB). The `direct` libguestfs backend launches qemu in `-display none`, so graphical/audio sub-packages are unused.
