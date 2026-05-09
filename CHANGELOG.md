@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-05-09
+
+### Fixed
+- **Cosign signature on the multi-arch manifest list.** v2.0.0 signed each
+  per-arch image at push time but did not sign the manifest list assembled
+  in the dedicated `manifest` job. As a result, `cosign verify` on a
+  floating tag (`:2`, `:latest`, `:slim`, `:full`, etc.) returned
+  `Error: no signatures found` because cosign resolves the tag to the
+  manifest list's index digest, which had no associated signature. The
+  manifest job now captures the pushed list digest via `podman manifest push
+  --digestfile` and signs it with `cosign sign` keyless. Consumers
+  (including the openimages.cloud reusable workflow) can now verify the
+  floating tag they actually pull.
+
 ## [2.0.0] - 2026-05-08
 
 First release under the **StackOps** organization (`stackopshq/libguestfs-tools-container`). Major version bump from the legacy `1.0.x` line published under `Net-Architect-Cloud/docker-libguestfs-tools` — this is a full rewrite (registry path, base image, default contents, build pipeline). The legacy 1.0.x tags remain in git history but point to discontinued image artifacts under the old organization; do not pull them.

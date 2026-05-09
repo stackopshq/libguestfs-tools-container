@@ -203,8 +203,13 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push manifest lists
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
+
+      - name: Build, push & sign manifest lists
         shell: bash
+        env:
+          COSIGN_YES: "true"
         run: |
           set -euo pipefail
           REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}"
@@ -220,6 +225,18 @@ jobs:
             if [[ "${VARIANT}" == "slim" ]]; then
               podman manifest add "${REPO}:${TAG}" "docker://${REPO}:${SRC}-arm64"
             fi
-            podman manifest push --all "${REPO}:${TAG}" "docker://${REPO}:${TAG}"
+            # podman manifest push --digestfile captures the index digest of
+            # the manifest list as it appears on the registry. We sign that
+            # digest with cosign keyless so consumers can verify the floating
+            # tag (e.g. :2, :latest) directly — without it, cosign verify on
+            # a manifest list returns "no signatures found" because per-arch
+            # signatures live on per-arch digests, not on the index.
+            digestfile=$(mktemp)
+            podman manifest push --all --digestfile "$digestfile" \
+              "${REPO}:${TAG}" "docker://${REPO}:${TAG}"
+            digest=$(cat "$digestfile")
+            rm -f "$digestfile"
+            echo "Manifest list ${REPO}:${TAG} pushed at ${digest}"
+            cosign sign "${REPO}@${digest}"
             echo "::endgroup::"
           done
