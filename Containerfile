@@ -64,7 +64,8 @@ RUN dnf -y install epel-release && \
         kmod \
         curl \
         tar \
-        gzip && \
+        gzip \
+        unzip && \
     if [ "${VARIANT}" = "full" ]; then \
         dnf -y install --setopt=install_weak_deps=False --nodocs \
             virt-v2v \

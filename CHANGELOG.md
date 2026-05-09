@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-05-09
+
+### Added
+- `unzip` package in the install layer (both `:slim` and `:full`).
+  Required by the openimages.cloud `publish-image` composite action,
+  which bootstraps aws-cli from the official `.zip` distribution.
+  Without it the publish step fails at "Install aws-cli if missing"
+  with `unzip: command not found`. Tiny addition (~150 KB).
+
 ## [2.0.1] - 2026-05-09
 
 ### Fixed
