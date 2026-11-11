@@ -57,6 +57,15 @@ ENV LIBGUESTFS_BACKEND=direct \
 # so the "btrfs" feature group (subvolume listing, used by inspection to find
 # Fedora's root subvolume) stays unavailable; packages-btrfs adds it back.
 # The final checks fail the build if the appliance cannot handle btrfs.
+#
+# Why passt is removed: libguestfs >= 1.58 (Rocky 10.2) requires passt and
+# uses it for appliance networking whenever `passt --help` runs. passt then
+# sandboxes itself with unshare(CLONE_NEWUSER), which Docker's default seccomp
+# profile denies without CAP_SYS_ADMIN, so in a GitHub Actions job container
+# every network-enabled virt-customize fails with "passt exited with status 1".
+# Without the binary, libguestfs falls back to qemu's built-in user networking
+# (-netdev user / SLIRP), as up to 2.0.x. Removed with --nodeps because
+# libguestfs has a hard RPM dependency on it.
 RUN dnf -y install epel-release centos-release-kmods-kernel && \
     dnf config-manager --set-enabled crb && \
     dnf -y install --setopt=install_weak_deps=False --nodocs \
@@ -95,6 +104,9 @@ RUN dnf -y install epel-release centos-release-kmods-kernel && \
         ! -name 'C' ! -name 'C.utf8' ! -name 'en' ! -name 'en_US' \
         -exec rm -rf {} + && \
     echo btrfs-progs > "$(rpm --eval '%{_libdir}')/guestfs/supermin.d/packages-btrfs" && \
+    rpm -e --nodeps passt && \
+    ! command -v passt && \
+    /usr/libexec/qemu-kvm -netdev help | grep -qx user && \
     test "$(ls /lib/modules | wc -l)" -eq 1 && \
     grep -Eq '^CONFIG_BTRFS_FS=[ym]$' /lib/modules/*/config && \
     mkdir -p /workspace
