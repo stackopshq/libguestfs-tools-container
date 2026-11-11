@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   included in the appliance.
 - The build fails if the image does not contain exactly one kernel with
   btrfs enabled.
+- ghcr.io login falls back to `GITHUB_TOKEN` when no `GHCR_TOKEN` secret is
+  defined (the case on GitHub, where the job token has `packages: write`).
+  Forges that inject a non-GitHub `GITHUB_TOKEN` keep using `GHCR_TOKEN`.
 
 ### Added
 - CI appliance self-test: boots the libguestfs appliance (TCG) on every
