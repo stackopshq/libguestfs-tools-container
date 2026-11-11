@@ -73,6 +73,7 @@ Both variants are signed via cosign keyless (Sigstore) and ship with an SPDX SBO
 
 - Ready-to-use libguestfs with `direct` backend (no libvirtd required)
 - Linux filesystems out of the box: ext2/3/4, XFS, BTRFS, FAT32 (NTFS only in `:full`)
+- Appliance kernel from the CentOS Kmods SIG (`kernel-latest`): the Rocky/RHEL 10 kernel has no btrfs, which btrfs-root guests such as Fedora Cloud 44+ need
 - `qemu-kvm-core` (no graphical/audio subpackages) — minimal qemu surface
 - Pre-tuned env vars for libguestfs appliance memory & CPU
 - Provenance: OCI labels (revision, version, created, source), Cosign signature, SPDX SBOM
