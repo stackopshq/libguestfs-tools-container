@@ -44,9 +44,24 @@ ENV LIBGUESTFS_BACKEND=direct \
 # output we never use in --display none mode.
 #
 # install_weak_deps=False + nodocs are mandatory for size.
-RUN dnf -y install epel-release && \
+#
+# Why the CentOS Kmods SIG kernel (centos-release-kmods-kernel, shipped in
+# Rocky "extras"): supermin builds the libguestfs appliance from the kernel
+# installed in this container, and the RHEL/Rocky 10 kernel is built with
+# CONFIG_BTRFS_FS unset. Guests with a btrfs root (Fedora Cloud 44+) then fail
+# in virt-customize with "unknown filesystem type 'btrfs'". The Kmods SIG
+# "kernel-latest" build (amd64 + arm64) has btrfs built in. kmod-btrfs for the
+# distro kernel was rejected: it tracks the RHEL kABI per minor release and
+# regularly lags the Rocky kernel, which would break rebuilds.
+# RHEL's libguestfs also leaves btrfs-progs out of the appliance package list,
+# so the "btrfs" feature group (subvolume listing, used by inspection to find
+# Fedora's root subvolume) stays unavailable; packages-btrfs adds it back.
+# The final checks fail the build if the appliance cannot handle btrfs.
+RUN dnf -y install epel-release centos-release-kmods-kernel && \
     dnf config-manager --set-enabled crb && \
     dnf -y install --setopt=install_weak_deps=False --nodocs \
+        kernel-core \
+        kernel-modules \
         qemu-kvm-core \
         qemu-img \
         libguestfs \
@@ -79,6 +94,9 @@ RUN dnf -y install epel-release && \
     find /usr/share/locale -mindepth 1 -maxdepth 1 -type d \
         ! -name 'C' ! -name 'C.utf8' ! -name 'en' ! -name 'en_US' \
         -exec rm -rf {} + && \
+    echo btrfs-progs > "$(rpm --eval '%{_libdir}')/guestfs/supermin.d/packages-btrfs" && \
+    test "$(ls /lib/modules | wc -l)" -eq 1 && \
+    grep -Eq '^CONFIG_BTRFS_FS=[ym]$' /lib/modules/*/config && \
     mkdir -p /workspace
 
 WORKDIR /workspace

@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-11
+
+### Fixed
+- **btrfs guests (Fedora Cloud 44+) could not be inspected or customized.**
+  `virt-customize` failed in `inspect_os` with `mount: unknown filesystem
+  type 'btrfs'`: supermin builds the appliance from the container's kernel,
+  and the Rocky/RHEL 10 kernel is built without `CONFIG_BTRFS_FS`. RHEL's
+  libguestfs also leaves `btrfs-progs` out of the appliance, so the `btrfs`
+  feature group (subvolume listing, needed to find Fedora's `root`
+  subvolume) was unavailable.
+
+### Changed
+- The appliance kernel now comes from the CentOS Kmods SIG `kernel-latest`
+  repository (`centos-release-kmods-kernel`, shipped in Rocky extras, amd64 +
+  arm64), which has btrfs built in. It replaces the distro kernel, so the
+  image holds a single kernel. `kmod-btrfs` for the distro kernel was not
+  used because it tracks the RHEL kABI per minor release and lags the Rocky
+  kernel. `btrfs-progs` also comes from that repository.
+- `packages-btrfs` added to the libguestfs `supermin.d` so `btrfs-progs` is
+  included in the appliance.
+- The build fails if the image does not contain exactly one kernel with
+  btrfs enabled.
+- ghcr.io login falls back to `GITHUB_TOKEN` when no `GHCR_TOKEN` secret is
+  defined (the case on GitHub, where the job token has `packages: write`).
+  Forges that inject a non-GitHub `GITHUB_TOKEN` keep using `GHCR_TOKEN`.
+
+### Added
+- CI appliance self-test: boots the libguestfs appliance (TCG) on every
+  arch/variant, creates a btrfs filesystem and a subvolume, mounts it and
+  writes a file. A release cannot publish an image that cannot handle btrfs.
+
 ## [2.0.2] - 2026-05-09
 
 ### Added

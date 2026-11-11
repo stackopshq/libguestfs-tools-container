@@ -103,12 +103,43 @@ jobs:
             podman run --rm "$REF" virt-v2v --version
           fi
 
+      - name: Appliance self-test (btrfs)
+        # Boots the real libguestfs appliance (TCG, since hosted runners may
+        # lack /dev/kvm) and mounts a fresh btrfs filesystem, including a
+        # subvolume as Fedora Cloud uses for its root. Fails the release if
+        # the appliance kernel or btrfs-progs is missing (Fedora 44+ builds).
+        shell: bash
+        run: |
+          set -euo pipefail
+          REF="${{ steps.build.outputs.image }}:${{ steps.meta.outputs.arch_tag }}"
+          podman run --rm \
+            -e LIBGUESTFS_BACKEND_SETTINGS=force_tcg \
+            -e LIBGUESTFS_MEMSIZE=1024 \
+            -e LIBGUESTFS_SMP=1 \
+            "$REF" bash -euo pipefail -c '
+              truncate -s 512M /tmp/btrfs.img
+              mkfs.btrfs -q /tmp/btrfs.img
+              out=$(guestfish -a /tmp/btrfs.img <<GF
+          run
+          mount /dev/sda /
+          btrfs-subvolume-create /root
+          mount-options subvol=root /dev/sda /
+          write /hello btrfs-ok
+          cat /hello
+          vfs-type /dev/sda
+          GF
+              )
+              echo "$out"
+              grep -qx btrfs-ok <<<"$out"
+              grep -qx btrfs <<<"$out"
+            '
+
       - name: Log in to GHCR
         uses: redhat-actions/podman-login@50c2d9a331bb67c8fdab99b86455fad05e2e3252  # v2
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.repository_owner }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Push per-arch image
         id: push
@@ -201,7 +232,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.repository_owner }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Install cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
