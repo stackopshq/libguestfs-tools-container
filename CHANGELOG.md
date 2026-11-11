@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-11-11
+
+### Fixed
+- **Appliance networking broken in Docker (regression in 2.1.0).** The 2.1.0
+  rebuild pulled libguestfs 1.58, which requires `passt` and uses it for
+  `--network` whenever the binary runs. passt sandboxes itself with
+  `unshare(CLONE_NEWUSER)`, denied by Docker's default seccomp profile
+  without `CAP_SYS_ADMIN`, so in GitHub Actions job containers every
+  network-enabled `virt-customize` failed with `passt exited with status 1`.
+  The `passt` binary is now removed (`rpm -e --nodeps`) and libguestfs falls
+  back to qemu user networking (`-netdev user`), as in 2.0.x. The build
+  fails if passt is still present or qemu lacks the `user` netdev.
+
+### Added
+- CI appliance self-test for networking, run under Docker (the consumers'
+  runtime): DNS lookup and HTTPS request from inside the appliance. The
+  release fails if it does not work.
+
 ## [2.1.0] - 2026-11-11
 
 ### Fixed

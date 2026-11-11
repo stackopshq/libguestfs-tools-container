@@ -134,6 +134,32 @@ jobs:
               grep -qx btrfs <<<"$out"
             '
 
+      - name: Appliance self-test (network, Docker runtime)
+        # Consumers run this image as a GitHub Actions job container, i.e.
+        # under Docker's default seccomp profile, which is stricter than
+        # podman's (no unshare without CAP_SYS_ADMIN). 2.1.0 shipped passt,
+        # which cannot sandbox itself there, and every network-enabled
+        # virt-customize failed. Run the network test under Docker so the
+        # release fails if the appliance cannot reach the internet there.
+        shell: bash
+        run: |
+          set -euo pipefail
+          REF="${{ steps.build.outputs.image }}:${{ steps.meta.outputs.arch_tag }}"
+          tar="${RUNNER_TEMP}/image.tar"
+          podman save --format docker-archive -o "$tar" "$REF"
+          IMG=$(docker load -i "$tar" | sed -n 's/^Loaded image: //p' | tail -1)
+          rm -f "$tar"
+          test -n "$IMG"
+          out=$(docker run --rm \
+            -e LIBGUESTFS_BACKEND_SETTINGS=force_tcg \
+            -e LIBGUESTFS_MEMSIZE=1024 \
+            -e LIBGUESTFS_SMP=1 \
+            "$IMG" guestfish -a /dev/null --network run : debug sh \
+            'getent hosts deb.debian.org && curl -sSfI -o /dev/null https://deb.debian.org/debian/ && echo network-ok')
+          echo "$out"
+          grep -qx network-ok <<<"$out"
+          docker rmi "$IMG" >/dev/null
+
       - name: Log in to GHCR
         uses: redhat-actions/podman-login@50c2d9a331bb67c8fdab99b86455fad05e2e3252  # v2
         with:
